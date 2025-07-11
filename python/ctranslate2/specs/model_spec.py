@@ -200,6 +200,30 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
                     setattr(spec, attr_name, other_name)
                     break
 
+    @torch.no_grad()
+    def prepare_scales_and_bias(hqq_meta: dict) -> torch.Tensor:
+        scales = hqq_meta['scale'].to(torch.bfloat16)
+        zeros = hqq_meta['zero'].to(torch.bfloat16)
+        
+        # bias = -zeros * scales 계산
+        bias = -zeros * scales
+
+        shape = hqq_meta['shape']
+        scales = scales.contiguous().reshape(shape[0], -1)
+        bias = bias.contiguous().reshape(shape[0], -1)
+
+        # (scale, bias) 쌍으로 패킹
+        scales_and_bias = torch.cat(
+            [
+                scales.reshape(scales.size(0), scales.size(1), 1),
+                bias.reshape(bias.size(0), bias.size(1), 1),
+            ],
+            dim=2,
+        ) # Shape: [out_features, num_groups, 2]
+
+        # C++ 커널이 기대하는 [num_groups, out_features, 2] 형태로 변환
+        return scales_and_bias.transpose(0, 1).contiguous()
+
     def _hqq_quants_to_torch_quants(self, w_q, scales, zeros, shape, nbits=4):
         max_int = 2**nbits - 1
         min_int = 0
@@ -312,20 +336,23 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
                                         compute_dtype=torch.bfloat16, device=device)
                         hqq_linear.quantize(value.to("bfloat16").tensor, **hqq_linear.quant_config)
 
-                        value = hqq_linear.W_q.cpu()
-                        scale = hqq_linear.meta['scale'].cpu()
-                        zero = hqq_linear.meta['zero'].cpu()
-                        old_shape = hqq_linear.meta['shape']
-                        value = Quantizer.unpack[hqq_linear.meta["packing"]](value)
-                        value, scale = self._hqq_quants_to_torch_quants(value, scale, zero, old_shape)
+                        W_q = hqq_linear.W_q.cpu()
+                        meta = hqq_linear.meta
+                        # scale = hqq_linear.meta['scale'].cpu()
+                        # zero = hqq_linear.meta['zero'].cpu()
+                        # old_shape = hqq_linear.meta['shape']
+                        unpacked_W_q = Quantizer.unpack[hqq_linear.meta["packing"]](W_q)
+                        # value, scale = self._hqq_quants_to_torch_quants(value, scale, zero, old_shape)
+                        scales_and_biases_tensor = self.prepare_scales_and_bias(meta)
 
-                        scale = scale.cpu()
-                        value = value.cpu()
-                        scale = PyTorchVariable(scale)
-                        value = PyTorchVariable(value)
-                        del hqq_linear.W_q
-                        del hqq_linear.meta['scale']
-                        del hqq_linear.meta['zero']
+                        # scale = scale.cpu()
+                        # value = value.cpu()
+                        scale = PyTorchVariable(unpacked_W_q.cpu())
+                        value = PyTorchVariable(scales_and_biases_tensor.cpu())
+                        # del hqq_linear.W_q
+                        # del hqq_linear.meta['scale']
+                        # del hqq_linear.meta['zero']
+                        del hqq_linear
 
             elif is_convertible:
                 if quantization in ("float16", "int8_float16"):
