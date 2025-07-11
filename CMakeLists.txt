@@ -206,6 +206,7 @@ set(SOURCES
   src/ops/awq/gemv.cc
   src/ops/awq/gemv_cpu.cc
   src/ops/sum.cc
+  src/ops/int4gemm_cpu.cc
   src/padder.cc
   src/profiler.cc
   src/random.cc
@@ -655,6 +656,7 @@ if (WITH_CUDA)
     src/ops/awq/gemm_gpu.cu
     src/ops/awq/gemv_gpu.cu
     src/ops/awq/dequantize_gpu.cu
+    src/ops/int4gemm_gpu.cu
   )
 
 

@@ -8,6 +8,11 @@ namespace ctranslate2 {
     template <typename InT, typename OutT>
     struct dequantize_func {
       __device__ __forceinline__
+      OutT operator()(float scale, InT x, float zero) const {
+        return __fdividef(__fsub_rn(static_cast<float>(x), zero) , scale);
+      }
+      
+      __device__ __forceinline__
       OutT operator()(float scale, InT x) const {
         return __fdividef(static_cast<float>(x), scale);
       }
