@@ -200,11 +200,7 @@ namespace ctranslate2 {
     StorageView Gemm::convert_to_int4pack(const StorageView& input,
                                           int32_t innerKTiles) {
       StorageView output(input.device(), input.dtype());
-#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 800)
       DEVICE_DISPATCH(input.device(), (convert_weight_to_int4pack<D>(input, output, innerKTiles)));
-#else
-      throw std::runtime_error("convert weight to int4pack is supported only GPU Arch >= 800");
-#endif
       return output;
     }
   }
