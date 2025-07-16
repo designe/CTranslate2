@@ -338,15 +338,9 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
 
                         W_q = hqq_linear.W_q.cpu()
                         meta = hqq_linear.meta
-                        # scale = hqq_linear.meta['scale'].cpu()
-                        # zero = hqq_linear.meta['zero'].cpu()
-                        # old_shape = hqq_linear.meta['shape']
                         unpacked_W_q = Quantizer.unpack[hqq_linear.meta["packing"]](W_q)
-                        # value, scale = self._hqq_quants_to_torch_quants(value, scale, zero, old_shape)
                         scales_and_biases_tensor = self.prepare_scales_and_bias(meta)
 
-                        # scale = scale.cpu()
-                        # value = value.cpu()
                         scale = PyTorchVariable(unpacked_W_q.cpu())
                         value = PyTorchVariable(scales_and_biases_tensor.cpu())
                         # del hqq_linear.W_q

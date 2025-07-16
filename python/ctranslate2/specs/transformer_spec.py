@@ -345,9 +345,16 @@ class FeedForwardSpec(model_spec.LayerSpec):
     def __init__(self, glu=False, rms_norm=False):
         self.layer_norm = common_spec.LayerNormSpec(rms_norm=rms_norm)
         self.linear_0 = common_spec.LinearSpec()
+        self.linear_0.weight_scale = None
+        self.linear_0.weight_zero = None
+        
         self.linear_1 = common_spec.LinearSpec()
+        self.linear_1.weight_scale = None
+        self.linear_1.weight_zero = None
         if glu:
             self.linear_0_noact = common_spec.LinearSpec()
+            self.linear_0_noact.weight_zero = None 
+            self.linear_0_noact.weight_scale = None
 
 
 class PositionEncoderSpec(model_spec.LayerSpec):

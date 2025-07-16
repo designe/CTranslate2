@@ -40,6 +40,10 @@ class MultiHeadAttentionSpec(model_spec.LayerSpec):
             common_spec.LinearSpec() for _ in range(2 if self_attention else 3)
         ]
 
+        for spec in self.linear:
+            spec.weight_scale = None
+            spec.weight_zero = None
+
         if relative_position:
             self.relative_position_keys = None
             self.relative_position_values = None
