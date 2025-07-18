@@ -201,9 +201,9 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
                     break
 
     @torch.no_grad()
-    def prepare_scales_and_bias(hqq_meta: dict) -> torch.Tensor:
-        scales = hqq_meta['scale'].to(torch.bfloat16)
-        zeros = hqq_meta['zero'].to(torch.bfloat16)
+    def prepare_scales_and_bias(self, hqq_meta: dict) -> torch.Tensor:
+        scales = hqq_meta['scale'].to(torch.float32)
+        zeros = hqq_meta['zero'].to(torch.float32)
         
         # bias = -zeros * scales 계산
         bias = -zeros * scales
@@ -328,13 +328,13 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
                         "hqq_int4",
                 ) and value.shape != 3 and hqq_is_available:
                     if 'embeddings' in name:
-                        value = value.to("bfloat16")
+                        value = value.to("float32")
                     else:
                         quant_config = BaseQuantizeConfig(nbits=4, group_size=group_size,
                                         quant_zero=False, quant_scale=False, axis=1)
                         hqq_linear = HQQLinear(None, quant_config=quant_config,
-                                        compute_dtype=torch.bfloat16, device=device)
-                        hqq_linear.quantize(value.to("bfloat16").tensor, **hqq_linear.quant_config)
+                                        compute_dtype=torch.float32, device=device)
+                        hqq_linear.quantize(torch.from_numpy(value.to("float32")), **hqq_linear.quant_config)
 
                         W_q = hqq_linear.W_q.cpu()
                         meta = hqq_linear.meta
@@ -351,9 +351,9 @@ class LayerSpec(FrozenAttr, metaclass=FrozenMeta):
             elif is_convertible:
                 if quantization in ("float16", "int8_float16"):
                     value = value.to("float16")
-                elif quantization in ("bfloat16", "int8_bfloat16", "hqq_int4"):
+                elif quantization in ("bfloat16", "int8_bfloat16"):
                     value = value.to("bfloat16")
-                elif quantization in ("float32", "int16", "int8_float32"):
+                elif quantization in ("float32", "int16", "int8_float32", "hqq_int4"):
                     value = value.to("float32")
 
             setattr(spec, key, value)

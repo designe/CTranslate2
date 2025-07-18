@@ -353,7 +353,7 @@ class FeedForwardSpec(model_spec.LayerSpec):
         self.linear_1.weight_zero = None
         if glu:
             self.linear_0_noact = common_spec.LinearSpec()
-            self.linear_0_noact.weight_zero = None 
+            self.linear_0_noact.weight_zero = None
             self.linear_0_noact.weight_scale = None
 
 
